@@ -47,6 +47,8 @@ Rectangle {
     property string providerFormBaseURL: ""
     property string providerFormKey: ""
     property var providerFormModels: []
+    property string keyEditingProviderID: ""
+    property string providerKeyInput: ""
 
     readonly property real labelWidth: 180
 
@@ -69,6 +71,8 @@ Rectangle {
     signal xAISecretDeleteRequested()
     signal providerSaveRequested(string id, string label, string baseURL, string key, var models)
     signal providerRemoveRequested(string id)
+    signal providerKeySaveRequested(string id, string key)
+    signal providerKeyClearRequested(string id)
     signal cancelRequested()
 
     function c(name, fallback) {
@@ -89,6 +93,11 @@ Rectangle {
         openAISecretRow.focusInput();
     }
 
+    function resetProviderKeyForm() {
+        keyEditingProviderID = "";
+        providerKeyInput = "";
+    }
+
     function resetProviderForm() {
         providerFormVisible = false;
         editingProviderID = "";
@@ -96,6 +105,7 @@ Rectangle {
         providerFormBaseURL = "";
         providerFormKey = "";
         providerFormModels = [];
+        resetProviderKeyForm();
     }
 
     function beginAddProvider() {
@@ -103,7 +113,13 @@ Rectangle {
         providerFormVisible = true;
     }
 
+    function beginSetProviderKey(id) {
+        resetProviderForm();
+        keyEditingProviderID = String(id ?? "");
+    }
+
     function beginEditProvider(id, label, baseURL, models) {
+        resetProviderKeyForm();
         editingProviderID = String(id ?? "");
         providerFormLabel = String(label ?? "");
         providerFormBaseURL = String(baseURL ?? "");
@@ -347,17 +363,108 @@ Rectangle {
         Repeater {
             model: panel.providersModel
 
-            delegate: ProviderRow {
+            delegate: Column {
+                id: providerEntry
+
+                readonly property string entryId: String(model.id ?? "")
+                readonly property bool keyEditing: panel.keyEditingProviderID === entryId
+
                 width: parent.width
-                providerId: String(model.id ?? "")
-                label: String(model.label ?? model.id ?? "")
-                baseUrl: String(model.baseUrl ?? "")
-                models: JSON.parse(String(model.modelsJson ?? "[]"))
-                busy: panel.providersBusy
-                theme: panel.theme
-                fontFamily: panel.fontFamily
-                onEditRequested: panel.beginEditProvider(model.id, model.label, model.baseUrl, JSON.parse(String(model.modelsJson ?? "[]")))
-                onRemoveRequested: panel.providerRemoveRequested(String(model.id ?? ""))
+                spacing: 4
+
+                ProviderRow {
+                    width: parent.width
+                    providerId: providerEntry.entryId
+                    label: String(model.label ?? model.id ?? "")
+                    baseUrl: String(model.baseUrl ?? "")
+                    models: JSON.parse(String(model.modelsJson ?? "[]"))
+                    managed: model.managed === undefined ? true : Boolean(model.managed)
+                    keyConfigured: Boolean(model.keyConfigured)
+                    keySource: String(model.keySource ?? "")
+                    busy: panel.providersBusy
+                    theme: panel.theme
+                    fontFamily: panel.fontFamily
+                    onEditRequested: panel.beginEditProvider(model.id, model.label, model.baseUrl, JSON.parse(String(model.modelsJson ?? "[]")))
+                    onRemoveRequested: panel.providerRemoveRequested(providerEntry.entryId)
+                    onKeySetRequested: panel.beginSetProviderKey(providerEntry.entryId)
+                    onKeyClearRequested: panel.providerKeyClearRequested(providerEntry.entryId)
+                }
+
+                Item {
+                    width: parent.width
+                    height: 32
+                    visible: providerEntry.keyEditing
+                    onVisibleChanged: {
+                        if (visible) {
+                            entryKeyField.text = "";
+                            entryKeyField.forceActiveFocus();
+                        }
+                    }
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: keyFormSave.left
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: 30
+                        radius: panel.cornerRadius(7)
+                        color: panel.c("input", "#0d1016")
+                        border.width: 1
+                        border.color: entryKeyField.activeFocus ? panel.c("primary", "#a7c7ff") : panel.c("panel_border", "#2b303b")
+
+                        TextInput {
+                            id: entryKeyField
+
+                            anchors.fill: parent
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            echoMode: TextInput.Password
+                            color: panel.c("text_strong", "#f2f4f8")
+                            font.family: panel.fontFamily
+                            font.pixelSize: panel.fontSize("subtitle", 13)
+                            verticalAlignment: TextInput.AlignVCenter
+                            clip: true
+                            onTextChanged: panel.providerKeyInput = text
+                            onAccepted: {
+                                if (keyFormSave.enabled)
+                                    keyFormSave.clicked();
+                            }
+
+                            Text {
+                                anchors.fill: parent
+                                visible: entryKeyField.text.length === 0
+                                text: "Paste API key..."
+                                color: panel.c("text_muted", "#8a93a3")
+                                font: entryKeyField.font
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                    }
+
+                    PaletteButton {
+                        id: keyFormSave
+
+                        anchors.right: keyFormCancel.left
+                        anchors.rightMargin: 6
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Save"
+                        tooltipText: "Store this API key in the keyring"
+                        theme: panel.theme
+                        filled: true
+                        enabled: !panel.providersBusy && !panel.providerAddBusy && panel.providerKeyInput.trim().length > 0
+                        onClicked: panel.providerKeySaveRequested(providerEntry.entryId, panel.providerKeyInput)
+                    }
+
+                    PaletteButton {
+                        id: keyFormCancel
+
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Cancel"
+                        theme: panel.theme
+                        onClicked: panel.resetProviderKeyForm()
+                    }
+                }
             }
         }
 

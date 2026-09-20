@@ -1829,6 +1829,8 @@ PanelWindow {
                         onXAISecretDeleteRequested: settingsController.deleteXAISecret()
                         onProviderSaveRequested: (id, label, baseURL, key, models) => settingsController.addProvider(id, label, baseURL, key, models)
                         onProviderRemoveRequested: id => settingsController.removeProvider(id)
+                        onProviderKeySaveRequested: (id, key) => settingsController.setProviderKey(id, key)
+                        onProviderKeyClearRequested: id => settingsController.clearProviderKey(id)
                         onCancelRequested: root.cancelOrClose()
                     }
 

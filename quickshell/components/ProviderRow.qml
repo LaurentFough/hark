@@ -7,12 +7,30 @@ Item {
     property string label: ""
     property string baseUrl: ""
     property var models: []
+    property bool managed: true
+    property bool keyConfigured: false
+    // Empty when the daemon does not report key status.
+    property string keySource: ""
     property bool busy: false
     property var theme: null
     property string fontFamily: ""
 
+    readonly property bool keyInKeyring: keyConfigured && keySource === "secret-service"
+    readonly property string keyStatusText: {
+        if (keySource === "")
+            return "";
+        if (keySource === "unknown")
+            return "API key status unavailable";
+        if (keySource === "environment")
+            return "API key from environment variable";
+        return keyConfigured ? "API key saved in keyring" : "No API key";
+    }
+    readonly property string detailText: (managed ? "" : "config.lua · ") + keyStatusText
+
     signal editRequested()
     signal removeRequested()
+    signal keySetRequested()
+    signal keyClearRequested()
 
     function c(name, fallback) {
         return theme && theme[name] ? theme[name] : fallback;
@@ -36,13 +54,15 @@ Item {
         width: parent.width
         spacing: 3
 
-        Row {
+        Item {
             width: parent.width
             height: 26
 
             Text {
+                anchors.left: parent.left
+                anchors.right: buttonRow.left
+                anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(0, parent.width - 2 * 68 - 16)
                 text: control.label
                 color: control.c("text_strong", "#f2f4f8")
                 font.family: control.fontFamily
@@ -51,23 +71,50 @@ Item {
                 elide: Text.ElideRight
             }
 
-            PaletteButton {
-                anchors.verticalCenter: parent.verticalCenter
-                text: "Edit"
-                tooltipText: "Edit this provider"
-                theme: control.theme
-                enabled: !control.busy
-                onClicked: control.editRequested()
-            }
+            Row {
+                id: buttonRow
 
-            PaletteButton {
+                anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                text: "Remove"
-                tooltipText: "Remove this provider and its models"
-                danger: true
-                theme: control.theme
-                enabled: !control.busy
-                onClicked: control.removeRequested()
+                spacing: 6
+
+                PaletteButton {
+                    visible: !control.managed
+                    text: control.keyInKeyring ? "Change key" : "Set key"
+                    tooltipText: "Store an API key in the keyring"
+                    theme: control.theme
+                    enabled: !control.busy
+                    onClicked: control.keySetRequested()
+                }
+
+                PaletteButton {
+                    visible: !control.managed && control.keyInKeyring
+                    text: "Clear key"
+                    tooltipText: "Remove the API key from the keyring"
+                    danger: true
+                    theme: control.theme
+                    enabled: !control.busy
+                    onClicked: control.keyClearRequested()
+                }
+
+                PaletteButton {
+                    visible: control.managed
+                    text: "Edit"
+                    tooltipText: "Edit this provider"
+                    theme: control.theme
+                    enabled: !control.busy
+                    onClicked: control.editRequested()
+                }
+
+                PaletteButton {
+                    visible: control.managed
+                    text: "Remove"
+                    tooltipText: "Remove this provider and its models"
+                    danger: true
+                    theme: control.theme
+                    enabled: !control.busy
+                    onClicked: control.removeRequested()
+                }
             }
         }
 
@@ -78,6 +125,16 @@ Item {
             font.family: control.fontFamily
             font.pixelSize: control.fontSize("body_small", 11)
             elide: Text.ElideMiddle
+        }
+
+        Text {
+            width: parent.width
+            visible: control.detailText.length > 0
+            text: control.detailText
+            color: control.c("text_muted", "#8a93a3")
+            font.family: control.fontFamily
+            font.pixelSize: control.fontSize("body_small", 11)
+            elide: Text.ElideRight
         }
 
         Flow {

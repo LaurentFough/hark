@@ -21,6 +21,7 @@ QtObject {
 
     property string pendingProviderID: ""
     property string pendingProviderKey: ""
+    property bool pendingKeyOnly: false
 
     property var reasoningModesModel: ListModel {
     }
@@ -52,7 +53,7 @@ QtObject {
     readonly property bool saveHistoryBusy: saveHistorySetting.busy
     readonly property bool retentionBusy: retentionSetting.busy
     readonly property bool shortcutBusy: shortcutSetProcess.running
-    readonly property bool providersBusy: providersListProcess.running || providerAddProcess.running || providerRemoveProcess.running
+    readonly property bool providersBusy: providersListProcess.running || providerAddProcess.running || providerRemoveProcess.running || providerKeyClearProcess.running
     readonly property bool providerAddBusy: providerAddProcess.running || providerSecretProcess.running
     readonly property bool secretStatusBusy: openAISecret.statusBusy || openRouterSecret.statusBusy || xAISecret.statusBusy
     readonly property bool secretSaveBusy: openAISecret.saveBusy
@@ -334,7 +335,10 @@ QtObject {
                     "id": String(provider.id ?? ""),
                     "label": String(provider.label ?? provider.id ?? ""),
                     "baseUrl": String(provider.base_url ?? ""),
-                    "modelsJson": JSON.stringify(models)
+                    "modelsJson": JSON.stringify(models),
+                    "managed": provider.managed === undefined ? true : Boolean(provider.managed),
+                    "keyConfigured": Boolean(provider.key_configured),
+                    "keySource": String(provider.key_source ?? "")
                 });
             }
         } catch (error) {
@@ -370,10 +374,31 @@ QtObject {
         providerRemoveProcess.exec([harkctlPath, "provider", "remove", "--json", "--id", id]);
     }
 
+    function setProviderKey(id, apiKey) {
+        const key = String(apiKey).trim();
+        if (providerSecretProcess.running || key.length === 0)
+            return ;
+
+        pendingProviderID = String(id);
+        pendingProviderKey = key;
+        pendingKeyOnly = true;
+        app.statusText = "Saving API key...";
+        providerSecretProcess.exec([harkctlPath, "secret", "set", "--stdin", pendingProviderID]);
+    }
+
+    function clearProviderKey(id) {
+        if (providerKeyClearProcess.running)
+            return ;
+
+        app.statusText = "Removing API key...";
+        providerKeyClearProcess.exec([harkctlPath, "secret", "delete", String(id)]);
+    }
+
     function finishProviderChange(successText) {
         app.statusText = successText;
         pendingProviderID = "";
         pendingProviderKey = "";
+        pendingKeyOnly = false;
         if (app && app.resetProviderForm)
             app.resetProviderForm();
 
@@ -859,7 +884,38 @@ QtObject {
         }
         onExited: (exitCode) => {
             stdinEnabled = true;
-            root.finishProviderChange(exitCode === 0 ? "Provider saved" : "Provider saved, but key save failed");
+            if (!root.pendingKeyOnly) {
+                root.finishProviderChange(exitCode === 0 ? "Provider saved" : "Provider saved, but key save failed");
+                return ;
+            }
+            if (exitCode === 0) {
+                root.finishProviderChange("API key saved");
+                return ;
+            }
+            root.pendingProviderID = "";
+            root.pendingProviderKey = "";
+            root.pendingKeyOnly = false;
+            if (root.app.statusText.length === 0 || root.app.statusText === "Saving API key...")
+                root.app.statusText = "API key save failed";
+        }
+
+        stderr: SplitParser {
+            onRead: (line) => {
+                if (line.length > 0)
+                    root.app.statusText = line.replace(/^harkctl:\s*/, "");
+
+            }
+        }
+
+    }
+
+    property Process providerKeyClearProcess: Process {
+        onExited: (exitCode) => {
+            if (exitCode === 0)
+                root.app.statusText = "API key removed";
+            else if (root.app.statusText.length === 0 || root.app.statusText === "Removing API key...")
+                root.app.statusText = "API key removal failed";
+            root.loadProviders();
         }
 
         stderr: SplitParser {
