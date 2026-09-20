@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"hark/internal/sessionenv"
 )
 
 type Paster struct {
@@ -50,7 +52,7 @@ func (p Paster) Paste(ctx context.Context) error {
 		return err
 	}
 
-	cmd := exec.CommandContext(ctx, command, args...)
+	cmd := sessionenv.Command(ctx, command, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		message := strings.TrimSpace(string(output))

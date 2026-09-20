@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"hark/internal/sessionenv"
 )
 
 type Client struct {
@@ -39,7 +41,7 @@ func (c Client) ActiveWindow(ctx context.Context) (Window, error) {
 		return Window{}, fmt.Errorf("%s is not installed or not in PATH", command)
 	}
 
-	cmd := exec.CommandContext(ctx, command, "activewindow", "-j")
+	cmd := sessionenv.Command(ctx, command, "activewindow", "-j")
 	output, err := cmd.Output()
 	if err != nil {
 		return Window{}, fmt.Errorf("%s activewindow failed: %w", command, err)
@@ -70,7 +72,7 @@ func (c Client) FocusWindow(ctx context.Context, win Window) error {
 	}
 
 	target := "address:" + win.Address
-	cmd := exec.CommandContext(ctx, command, "dispatch", "focuswindow", target)
+	cmd := sessionenv.Command(ctx, command, "dispatch", "focuswindow", target)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		message := strings.TrimSpace(string(output))

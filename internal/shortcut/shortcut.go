@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"hark/internal/sessionenv"
 )
 
 const (
@@ -601,10 +602,10 @@ func closeTemporaryFile(file *os.File, operationErr error) error {
 }
 
 func liveConflict(ctx context.Context, target parsedShortcut) (string, error) {
-	if os.Getenv("HYPRLAND_INSTANCE_SIGNATURE") == "" {
+	if sessionenv.Getenv("HYPRLAND_INSTANCE_SIGNATURE") == "" {
 		return "", nil
 	}
-	output, err := exec.CommandContext(ctx, "hyprctl", "binds").Output()
+	output, err := sessionenv.Command(ctx, "hyprctl", "binds").Output()
 	if err != nil {
 		return "", fmt.Errorf("inspect Hyprland shortcuts: %w", err)
 	}
@@ -640,13 +641,13 @@ func conflictFromBinds(output []byte, target parsedShortcut) string {
 }
 
 func reloadAndValidate(ctx context.Context) error {
-	if os.Getenv("HYPRLAND_INSTANCE_SIGNATURE") == "" {
+	if sessionenv.Getenv("HYPRLAND_INSTANCE_SIGNATURE") == "" {
 		return nil
 	}
 	if err := reload(ctx); err != nil {
 		return err
 	}
-	output, err := exec.CommandContext(ctx, "hyprctl", "configerrors").CombinedOutput()
+	output, err := sessionenv.Command(ctx, "hyprctl", "configerrors").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("validate Hyprland configuration: %s", commandError(err, output))
 	}
@@ -657,7 +658,7 @@ func reloadAndValidate(ctx context.Context) error {
 }
 
 func reload(ctx context.Context) error {
-	output, err := exec.CommandContext(ctx, "hyprctl", "reload").CombinedOutput()
+	output, err := sessionenv.Command(ctx, "hyprctl", "reload").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("reload Hyprland: %s", commandError(err, output))
 	}

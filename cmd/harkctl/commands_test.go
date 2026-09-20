@@ -159,3 +159,11 @@ func TestReadSecretValueRejectsOversizedInput(t *testing.T) {
 		t.Fatal("readSecretValue accepted oversized input")
 	}
 }
+
+func TestSingleLineJoinsToolOutput(t *testing.T) {
+	got := singleLine("copy text: wl-copy failed: Failed to connect\nNote: unset\nPlease check the socket.")
+	want := "copy text: wl-copy failed: Failed to connect ; Note: unset ; Please check the socket."
+	if got != want {
+		t.Fatalf("singleLine = %q, want %q", got, want)
+	}
+}

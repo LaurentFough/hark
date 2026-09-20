@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"hark/internal/buildinfo"
@@ -84,7 +85,7 @@ func main() {
 	}
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "harkctl:", err)
+		fmt.Fprintln(os.Stderr, "harkctl:", singleLine(err.Error()))
 		exitCode := 1
 		var coded interface{ ExitCode() int }
 		if errors.As(err, &coded) {
@@ -92,6 +93,12 @@ func main() {
 		}
 		os.Exit(exitCode)
 	}
+}
+
+// singleLine keeps multi-line tool output on one stderr line: the overlay
+// shows only one line at a time.
+func singleLine(message string) string {
+	return strings.Join(strings.Fields(strings.ReplaceAll(message, "\n", " ; ")), " ")
 }
 
 type commandError struct {

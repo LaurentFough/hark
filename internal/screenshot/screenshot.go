@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"hark/internal/sessionenv"
 )
 
 type Capturer struct {
@@ -50,7 +52,7 @@ func (c Capturer) CaptureRegion(ctx context.Context) (Attachment, error) {
 		return Attachment{}, fmt.Errorf("%s is not installed or not in PATH", slurp)
 	}
 
-	geometryBytes, err := exec.CommandContext(ctx, slurp).CombinedOutput()
+	geometryBytes, err := sessionenv.Command(ctx, slurp).CombinedOutput()
 	if err != nil {
 		message := strings.TrimSpace(string(geometryBytes))
 		if message == "" {
@@ -93,7 +95,7 @@ func (c Capturer) captureGeometry(ctx context.Context, geometry, prefix string) 
 	}
 
 	path := filepath.Join(dir, prefix+"-"+time.Now().Format("20060102-150405.000000000")+".png")
-	cmd := exec.CommandContext(ctx, grim, "-g", geometry, "-t", "png", path)
+	cmd := sessionenv.Command(ctx, grim, "-g", geometry, "-t", "png", path)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		message := strings.TrimSpace(string(output))
