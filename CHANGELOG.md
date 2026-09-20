@@ -5,20 +5,44 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-- Added configurable OpenAI-compatible providers (from `xmmanuellx/hark`):
-  a `providers` table in `config.lua`, a provider manager in Settings, and
+## [0.1.9] - 2026-09-20
+
+### Added
+
+- Configurable OpenAI-compatible providers (from `xmmanuellx/hark`): a
+  `providers` table in `config.lua`, a provider manager in Settings with
+  add, edit, and remove and any number of model ids per provider, and
   `harkctl provider` commands.
-- Settings now lists providers defined in `config.lua` alongside panel-managed
+- Settings lists providers defined in `config.lua` alongside panel-managed
   ones, shows each provider's API key status, and can set or clear a key for
   `config.lua` providers. `harkctl provider list` gains `managed`,
   `key_configured`, and `key_source`.
-- Custom providers on a loopback `base_url` no longer require an API key.
-- Added `scripts/install-omarchy.sh`, which builds the runtime and links this
+- A Settings toggle to hide the Hark icon in the Omarchy bar.
+- `scripts/install-omarchy.sh`, which builds the runtime and links this
   checkout as the Omarchy plugin, so a fork can be installed from this single
   repository instead of the generated `hark-plugin` repository. The release
   workflow no longer tries to publish to `konradk/hark-plugin` from forks.
+
+### Changed
+
+- Custom providers on a loopback `base_url` no longer require an API key.
+- `harkd.service` is now wanted by `graphical-session.target` instead of
+  `default.target`. Rerunning `scripts/install.sh` moves an existing enabled
+  service to the new target.
+- `harkctl` prints each error on a single line, so the overlay shows the whole
+  message instead of only the last line of multi-line tool output.
+
+### Fixed
+
+- Copy, paste, screenshots, and window focus restore failed when the daemon
+  started before the compositor exported its session, which left
+  `WAYLAND_DISPLAY` and `HYPRLAND_INSTANCE_SIGNATURE` unset. Subprocesses now
+  recover both from `XDG_RUNTIME_DIR`.
+- Copying an answer could hang until something else replaced the clipboard,
+  because `wl-copy` keeps a background process holding standard error open.
 - Fall back to the plugin's own directory when the host omits `__sourceDir`
   from the manifest, which newer Omarchy shells do for third-party plugins.
+- Removed unused code that made the CI static analysis step fail.
 
 ## [0.1.7] - 2026-08-13
 
