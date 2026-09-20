@@ -76,6 +76,8 @@ func TestProviderAPIKeyXAIFallsBackToEnv(t *testing.T) {
 
 func TestDeleteProviderAPIKey(t *testing.T) {
 	keyring.MockInit()
+	// An ambient key must not mask the deleted keyring entry.
+	t.Setenv("OPENAI_API_KEY", "")
 
 	if err := SetProviderAPIKey("openai", "secret-key"); err != nil {
 		t.Fatalf("SetProviderAPIKey returned error: %v", err)
