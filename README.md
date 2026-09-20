@@ -102,6 +102,41 @@ stop it when the shell exits. Disable or remove the plugin with the normal
 `omarchy plugin` commands; history and configuration remain in their XDG data
 directories.
 
+### Single-repository install (no `hark-plugin` repo)
+
+`konradk/hark-plugin` exists only because `omarchy plugin add` is a plain
+`git clone` of a repository's default branch with no build step, so a plugin
+installed that way must already contain its binaries. Committing generated
+binaries into this source repository would bloat every clone, so upstream
+publishes them to a separate generated repository instead.
+
+When you install from a checkout of this repository you do not need it. The
+repository root is already a valid plugin folder (`omarchy plugin validate .`
+passes); it only lacks `bin/`, which is gitignored. Build the runtime locally
+and link the checkout into the plugins directory:
+
+```bash
+scripts/install-omarchy.sh --dry-run          # show what will happen
+scripts/install-omarchy.sh --restart-shell    # build, link, restart harkd and the shell
+```
+
+The script runs `scripts/build-plugin-runtime.sh` (Go tests, then a static
+build of `bin/harkd` and `bin/harkctl`), moves any existing plugin folder to
+`~/.config/omarchy/plugins.backup/` instead of deleting it, links this checkout
+as `~/.config/omarchy/plugins/hark`, and restarts the `harkd` user unit when it
+exists. Quickshell caches plugin QML, so edited QML only loads after
+`omarchy-restart-shell`.
+
+To update: `git pull`, then run the script again. `omarchy plugin update hark`
+also fast-forwards a git checkout, but it only moves the source, so the
+runtime still has to be rebuilt. Alternatively, `omarchy plugin add
+<this-repo-url>` clones the source straight into the plugins directory; run
+`scripts/install-omarchy.sh` from that clone to build its runtime.
+
+The release scripts (`package-plugin.sh`, `publish-plugin-repo.sh`) are kept so
+this repository stays mergeable with upstream. The publish step in
+`.github/workflows/release.yml` only runs on `konradk/hark`.
+
 ## Install on Arch + Hyprland
 
 Build and install Hark for the current user:

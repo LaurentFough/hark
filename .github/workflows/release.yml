@@ -82,6 +82,9 @@ jobs:
       # Runs before the GitHub release so a published release always implies
       # that `omarchy plugin add/update` can already see this version.
       - name: Publish plugin repository
+        # Pushes to konradk/hark-plugin with a token only upstream holds. Forks
+        # install from this repository directly (scripts/install-omarchy.sh).
+        if: github.repository == 'konradk/hark'
         env:
           PLUGIN_REPO_TOKEN: ${{ secrets.PLUGIN_REPO_TOKEN }}
         run: scripts/publish-plugin-repo.sh "${GITHUB_REF_NAME}"

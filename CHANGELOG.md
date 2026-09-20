@@ -9,6 +9,10 @@ follows [Semantic Versioning](https://semver.org/).
   a `providers` table in `config.lua`, a provider manager in Settings, and
   `harkctl provider` commands.
 - Custom providers on a loopback `base_url` no longer require an API key.
+- Added `scripts/install-omarchy.sh`, which builds the runtime and links this
+  checkout as the Omarchy plugin, so a fork can be installed from this single
+  repository instead of the generated `hark-plugin` repository. The release
+  workflow no longer tries to publish to `konradk/hark-plugin` from forks.
 - Fall back to the plugin's own directory when the host omits `__sourceDir`
   from the manifest, which newer Omarchy shells do for third-party plugins.
 
