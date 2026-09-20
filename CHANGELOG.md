@@ -5,6 +5,13 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- Added configurable OpenAI-compatible providers (from `xmmanuellx/hark`):
+  a `providers` table in `config.lua`, a provider manager in Settings, and
+  `harkctl provider` commands.
+- Custom providers on a loopback `base_url` no longer require an API key.
+- Fall back to the plugin's own directory when the host omits `__sourceDir`
+  from the manifest, which newer Omarchy shells do for third-party plugins.
+
 ## [0.1.7] - 2026-08-13
 
 - Added native xAI support for Grok 4.6 and Grok 4.5, including streaming,
