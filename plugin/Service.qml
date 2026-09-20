@@ -10,7 +10,9 @@ QtObject {
     property var shell: null
     property var manifest: null
 
-    readonly property string pluginDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : ""
+    // Newer Omarchy strips __sourceDir from third-party manifests; fall back to
+    // this file's own location (plugin/ -> plugin root).
+    readonly property string pluginDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : decodeURIComponent(Qt.resolvedUrl("../").toString().replace(/^file:\/\//, "").replace(/\/$/, ""))
     readonly property string harkctlPath: pluginDir.length > 0 ? pluginDir + "/bin/harkctl" : "harkctl"
     readonly property string harkdPath: pluginDir.length > 0 ? pluginDir + "/bin/harkd" : "harkd"
 

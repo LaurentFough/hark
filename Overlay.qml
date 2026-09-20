@@ -20,7 +20,9 @@ Item {
 
     function syncService() {
         const currentService = root.effectiveService;
-        const pluginDir = root.manifest && root.manifest.__sourceDir ? String(root.manifest.__sourceDir) : "";
+        // Newer Omarchy strips __sourceDir from third-party manifests; fall back
+        // to this file's own location (the plugin root).
+        const pluginDir = root.manifest && root.manifest.__sourceDir ? String(root.manifest.__sourceDir) : decodeURIComponent(Qt.resolvedUrl("./").toString().replace(/^file:\/\//, "").replace(/\/$/, ""));
         if (currentService && currentService.harkctlPath)
             overlay.harkctlPath = String(currentService.harkctlPath);
         else if (pluginDir.length > 0)
