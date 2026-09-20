@@ -210,14 +210,6 @@ func allowedModelIDs(cfg config.Config) []string {
 	return models
 }
 
-func (a *appState) providerNameForModel(model string) string {
-	provider, ok := configuredProviderForModel(a.snapshotConfig(), model)
-	if ok {
-		return provider
-	}
-	return config.ProviderOpenAI
-}
-
 func configuredProviderForModel(cfg config.Config, model string) (string, bool) {
 	configured, ok := configuredModel(cfg, model)
 	if !ok {
