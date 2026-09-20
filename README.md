@@ -520,6 +520,12 @@ harkctl secret set local
 printf '%s' "$LOCAL_API_KEY" | harkctl secret set --stdin local
 ```
 
+A key is optional when `base_url` points at this machine (`localhost`,
+`127.0.0.0/8`, or `::1`), since local servers such as llama.cpp, Ollama, LM
+Studio, and vLLM usually run without authentication. Hark then sends no
+`Authorization` header unless a key is stored. Any other host still requires a
+key.
+
 Custom providers use the Chat Completions endpoint, so they work with any
 OpenAI-compatible server (Ollama, LM Studio, vLLM, local gateways, and most
 hosted proxies). They do not request Hark's web-search plugin, so a provider's

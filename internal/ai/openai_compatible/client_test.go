@@ -110,11 +110,60 @@ func TestAskOmitsReasoningEffortForAuto(t *testing.T) {
 	}
 }
 
-func TestAskRequiresAPIKey(t *testing.T) {
-	client := Client{BaseURL: "http://localhost/v1"}
+func TestAskRequiresAPIKeyForRemoteHosts(t *testing.T) {
+	client := Client{BaseURL: "https://llm.example.com/v1"}
 	_, err := client.Ask(context.Background(), ai.Request{Prompt: "hello", Model: "test-model"})
 	if err == nil || !strings.Contains(err.Error(), "API key is not set") {
 		t.Fatalf("Ask error = %v, want missing key error", err)
+	}
+}
+
+func TestAskAllowsMissingAPIKeyOnLoopback(t *testing.T) {
+	var authHeader string
+	var authPresent bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, authPresent = r.Header["Authorization"]
+		authHeader = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	// httptest binds to 127.0.0.1, so this exercises the loopback exemption.
+	client := Client{BaseURL: server.URL, HTTPClient: server.Client()}
+	events, err := client.Ask(context.Background(), ai.Request{Prompt: "hello", Model: "test-model"})
+	if err != nil {
+		t.Fatalf("Ask returned error: %v", err)
+	}
+	for range events {
+	}
+
+	if authPresent || authHeader != "" {
+		t.Fatalf("expected no Authorization header without a key, got %q", authHeader)
+	}
+}
+
+func TestIsLoopbackBaseURL(t *testing.T) {
+	tests := []struct {
+		url  string
+		want bool
+	}{
+		{"http://localhost:8080/v1", true},
+		{"http://LOCALHOST/v1", true},
+		{"http://127.0.0.1:1234/v1", true},
+		{"http://127.1.2.3/v1", true},
+		{"http://[::1]:11434/v1", true},
+		{"https://llm.example.com/v1", false},
+		{"http://192.168.1.20:8000/v1", false},
+		{"http://0.0.0.0:8000/v1", false},
+		{"http://localhost.example.com/v1", false},
+		{"not a url", false},
+		{"", false},
+	}
+	for _, test := range tests {
+		if got := isLoopbackBaseURL(test.url); got != test.want {
+			t.Errorf("isLoopbackBaseURL(%q) = %v, want %v", test.url, got, test.want)
+		}
 	}
 }
 

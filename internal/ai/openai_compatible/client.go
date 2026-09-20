@@ -12,7 +12,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"hark/internal/ai"
@@ -53,7 +55,7 @@ func (c *Client) Ask(ctx context.Context, req ai.Request) (<-chan ai.Event, erro
 	if err != nil {
 		return nil, err
 	}
-	if apiKey == "" {
+	if apiKey == "" && !isLoopbackBaseURL(c.BaseURL) {
 		return nil, fmt.Errorf("%s API key is not set", c.displayName())
 	}
 	// Resolve into locals: Ask runs concurrently and must not mutate the client.
@@ -85,7 +87,9 @@ func (c *Client) Ask(ctx context.Context, req ai.Request) (<-chan ai.Event, erro
 	if err != nil {
 		return nil, fmt.Errorf("create %s request: %w", c.displayName(), err)
 	}
-	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	if apiKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "text/event-stream")
 
@@ -114,6 +118,22 @@ func (c *Client) apiKey() (string, error) {
 		return c.APIKeyProvider()
 	}
 	return c.APIKey, nil
+}
+
+// isLoopbackBaseURL reports whether baseURL points at this machine. Local
+// servers (llama.cpp, Ollama, LM Studio, vLLM) usually run without
+// authentication, so an unset key is only an error for non-loopback hosts.
+func isLoopbackBaseURL(baseURL string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil {
+		return false
+	}
+	host := parsed.Hostname()
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func (c *Client) displayName() string {
