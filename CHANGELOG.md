@@ -8,6 +8,10 @@ follows [Semantic Versioning](https://semver.org/).
 - Added configurable OpenAI-compatible providers (from `xmmanuellx/hark`):
   a `providers` table in `config.lua`, a provider manager in Settings, and
   `harkctl provider` commands.
+- Settings now lists providers defined in `config.lua` alongside panel-managed
+  ones, shows each provider's API key status, and can set or clear a key for
+  `config.lua` providers. `harkctl provider list` gains `managed`,
+  `key_configured`, and `key_source`.
 - Custom providers on a loopback `base_url` no longer require an API key.
 - Added `scripts/install-omarchy.sh`, which builds the runtime and links this
   checkout as the Omarchy plugin, so a fork can be installed from this single

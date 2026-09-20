@@ -568,17 +568,26 @@ own web-search behavior applies. Provider ids must be unique and must not
 reuse `openai`, `openrouter`, or `xai`.
 
 You can also manage providers from Hark Settings (`Ctrl+,`) without touching
-the config file. The **Providers** section lists every panel-managed provider
-and lets you:
+the config file. The **Providers** section lists every custom provider, both
+panel-managed ones and those defined in `config.lua`, with the state of its API
+key (saved in the keyring, from an environment variable, or not set). For a
+panel-managed provider you can:
 
 - **Add** or **edit** a provider (name, base URL, and API key).
 - Type the **model ids** right in the same form; each one becomes a tag you can
   remove, and a provider can hold **multiple models**. Model names are their
   endpoint id, so there is nothing extra to name.
 
-Providers created this way are stored by the daemon and merged with the ones
-in `config.lua`; config-file entries take precedence on ID collisions. The
-same operations are available on the CLI:
+A provider defined in `config.lua` is marked `config.lua` and cannot be edited
+or removed from Settings. Its API key can still be set (**Set key** or **Change
+key**) or removed from the keyring (**Clear key**). A key supplied through an
+environment variable is shown but not cleared here.
+
+Providers created from the panel are stored by the daemon and merged with the
+ones in `config.lua`; config-file entries take precedence on ID collisions. The
+same operations are available on the CLI, and `provider list` reports `managed`
+and the key status (`key_configured`, `key_source`) for each provider without
+ever including the key itself:
 
 ```bash
 harkctl provider list --json
