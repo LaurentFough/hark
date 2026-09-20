@@ -111,11 +111,38 @@ type providerListModel struct {
 	Label string `json:"label"`
 }
 
+// Key status is resolved here because the panel's harkctl does not see the
+// daemon's environment.
 type providerListEntry struct {
-	ID      string              `json:"id"`
-	Label   string              `json:"label"`
-	BaseURL string              `json:"base_url"`
-	Models  []providerListModel `json:"models"`
+	ID            string              `json:"id"`
+	Label         string              `json:"label"`
+	BaseURL       string              `json:"base_url"`
+	Managed       bool                `json:"managed"`
+	KeyConfigured bool                `json:"key_configured"`
+	KeySource     string              `json:"key_source"`
+	Models        []providerListModel `json:"models"`
+}
+
+const keySourceUnknown = "unknown"
+
+func newProviderListEntry(id, label, baseURL string, managed bool, models []providerListModel) providerListEntry {
+	if strings.TrimSpace(label) == "" {
+		label = id
+	}
+	if models == nil {
+		models = []providerListModel{}
+	}
+	sort.Slice(models, func(i, j int) bool { return models[i].ID < models[j].ID })
+
+	entry := providerListEntry{ID: id, Label: label, BaseURL: baseURL, Managed: managed, Models: models}
+	status, err := secrets.ProviderAPIKeyStatus(id)
+	if err != nil {
+		entry.KeySource = keySourceUnknown
+		return entry
+	}
+	entry.KeyConfigured = status.Configured
+	entry.KeySource = string(status.Source)
+	return entry
 }
 
 type providerSaveRequest struct {
@@ -147,19 +174,27 @@ func (a *appState) providersList(ctx context.Context, req ipc.Request) (any, err
 		modelsByProvider[model.Provider] = append(modelsByProvider[model.Provider], providerListModel{ID: model.ID, Label: model.Label})
 	}
 
-	entries := make([]providerListEntry, 0, len(providers))
-	for _, provider := range providers {
-		attached := modelsByProvider[provider.ID]
-		if attached == nil {
-			attached = []providerListModel{}
+	entries := make([]providerListEntry, 0, len(providers)+len(a.baseCfg.Providers))
+
+	// config.lua wins on id collisions; its models are not in the store.
+	effective := a.snapshotConfig()
+	configIDs := make(map[string]struct{}, len(a.baseCfg.Providers))
+	for _, spec := range a.baseCfg.Providers {
+		configIDs[spec.ID] = struct{}{}
+		var attached []providerListModel
+		for _, model := range effective.Provider.Models {
+			if model.Provider == spec.ID {
+				attached = append(attached, providerListModel{ID: model.ID, Label: model.Label})
+			}
 		}
-		sort.Slice(attached, func(i, j int) bool { return attached[i].ID < attached[j].ID })
-		entries = append(entries, providerListEntry{
-			ID:      provider.ID,
-			Label:   provider.Label,
-			BaseURL: provider.BaseURL,
-			Models:  attached,
-		})
+		entries = append(entries, newProviderListEntry(spec.ID, spec.Label, spec.BaseURL, false, attached))
+	}
+
+	for _, provider := range providers {
+		if _, shadowed := configIDs[provider.ID]; shadowed {
+			continue
+		}
+		entries = append(entries, newProviderListEntry(provider.ID, provider.Label, provider.BaseURL, true, modelsByProvider[provider.ID]))
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].ID < entries[j].ID })
 	return entries, nil

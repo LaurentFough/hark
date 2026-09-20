@@ -17,10 +17,13 @@ type providerModelEntry struct {
 }
 
 type providerEntry struct {
-	ID      string               `json:"id"`
-	Label   string               `json:"label"`
-	BaseURL string               `json:"base_url"`
-	Models  []providerModelEntry `json:"models"`
+	ID            string               `json:"id"`
+	Label         string               `json:"label"`
+	BaseURL       string               `json:"base_url"`
+	Managed       bool                 `json:"managed"`
+	KeyConfigured bool                 `json:"key_configured"`
+	KeySource     string               `json:"key_source"`
+	Models        []providerModelEntry `json:"models"`
 }
 
 func providerCommand(ctx context.Context, socketPath string, args []string) error {
