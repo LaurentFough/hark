@@ -22,4 +22,4 @@ MemoryHigh=768M
 MemoryMax=1G
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target

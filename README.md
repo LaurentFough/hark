@@ -213,6 +213,10 @@ systemctl --user enable --now harkd.service
 harkctl status
 ```
 
+The service is wanted by `graphical-session.target`, so it starts after the
+compositor exports its session. Rerunning `scripts/install.sh` migrates an
+existing installation that was enabled under `default.target`.
+
 The installer adds `Super+A` to open Hark and `Super+Alt+A` to capture the
 focused window and attach it to Hark when both combinations are available.
 Change or disable either shortcut from Hark Settings (`Ctrl+,`), or manage

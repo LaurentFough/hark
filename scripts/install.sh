@@ -172,6 +172,9 @@ fi
 
 if [[ "${HARK_NO_RESTART:-0}" != "1" ]] && command -v systemctl >/dev/null 2>&1; then
   systemctl --user daemon-reload
+  if systemctl --user is-enabled --quiet harkd.service; then
+    systemctl --user reenable harkd.service
+  fi
   if systemctl --user is-active --quiet harkd.service; then
     systemctl --user restart harkd.service
   fi
